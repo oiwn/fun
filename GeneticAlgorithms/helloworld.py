@@ -44,6 +44,7 @@ def sample_wr(population, k):
         result[i] = population[j]
     return result
 
+
 class GeneticCode:
     def __init__(self, dnk="", goal=GOAL):
         if dnk == "":
@@ -80,6 +81,7 @@ class GeneticCode:
         """
         part = random.randint(0, len(self.dnk)-1)
         return "".join(self.dnk[0:part] + another_dnk.get()[part:])
+
 
 class GenePool():
     pool_size = 100
@@ -121,7 +123,9 @@ class GenePool():
             logger.info(self.pool[0].get())
             time.sleep(0.1)
             iterations += 1
+            
         return iterations
+
 
 def main():
     usage = '%s [options] [text]' % sys.argv[0]
