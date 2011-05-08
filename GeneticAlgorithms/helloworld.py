@@ -1,56 +1,99 @@
+"""
+Simple experement with Genetic Algorithms
+Hello world via bunch of evolving strings.
+
+theory http://en.wikipedia.org/wiki/Genetic_algorithm
+"""
+import sys
 import time
 import string
 import random
+import logging
 
+from optparse import OptionParser
+
+__version__ = "1.0"
+
+logger = logging.getLogger('helloworld')
+
+# form genetic codes
 GENES = "".join(map(lambda x, y: x+y, string.ascii_uppercase, string.ascii_lowercase)) + \
         string.punctuation + " "
-GOAL = "Hello world! Genetic algorythms ver."
 
-def fitness(chromosome):
+# goal string C.O.
+GOAL = "Hello world! Genetic Algorithm ver."
+
+def fitness(dnk, goal):
+    """
+    calculates how close is dnk to GOAL <<< this called "fitness function"
+    f = 0 if conditions are satisfied
+    """
     f = 0
-    for index, gene in enumerate(chromosome):
-        if gene != GOAL[index]:
+    for index, gene in enumerate(dnk):
+        if gene != goal[index]:
             f -= 1
     return f
 
+def sample_wr(population, k):
+    "Chooses k random elements (with replacement) from a population"
+    n = len(population)
+    _random, _int = random.random, int  # speed hack 
+    result = [None] * k
+    for i in xrange(k):
+        j = _int(_random() * n)
+        result[i] = population[j]
+    return result
+
 class GeneticCode:
-    def __init__(self, dnk=""):
+    def __init__(self, dnk="", goal=GOAL):
         if dnk == "":
-            self.dnk = "".join(random.sample(GENES, len(GOAL)))
+            self.dnk = "".join(sample_wr(GENES, len(goal)))
         else:
             self.dnk = dnk
+        self.goal = goal
 
     def get(self):
         return self.dnk
 
     def fitness(self):
-        return fitness(self.dnk)
+        return fitness(self.dnk, self.goal)
     
     def mutate(self, turns=5):
-        _dnk = [item for item in self.dnk]
+        """
+        mutate dnk sequence "on place"
+        turns - how much elements will be changed
+        """
+        _dnk = list(self.dnk)
         for item in range(turns):
             rnd_elem_index = random.randint(0, len(_dnk)-1)
-            if _dnk[rnd_elem_index] == GOAL[rnd_elem_index]:
+            if _dnk[rnd_elem_index] == self.goal[rnd_elem_index]:
                 pass
             else:
                 _dnk[rnd_elem_index] = random.choice(GENES)
         self.dnk = "".join(_dnk)
 
     def replicate(self, another_dnk):
+        """
+        breed 2 dnk sequences
+        cut one, cut two and mix it together
+        return offspring dnk string
+        """
         part = random.randint(0, len(self.dnk)-1)
         return "".join(self.dnk[0:part] + another_dnk.get()[part:])
 
 class GenePool():
     pool_size = 100
     
-    def __init__(self):
-        self.pool = [GeneticCode() for item in range(self.pool_size)]
+    def __init__(self, goal=GOAL):
+        self.pool = [GeneticCode(goal=goal) for item in range(self.pool_size)]
+        self.goal = goal
 
     def _print(self):
         for item in self.pool:
             print item.get() + " - " + str(item.fitness())
 
     def get_random(self):
+        "Get random element from pool"
         return self.pool[random.randint(0, len(self.pool)-1)]
 
     def darvin(self, winners=0.1):
@@ -65,22 +108,45 @@ class GenePool():
 
         while len(self.pool) < self.pool_size:
             new_life = self.get_random().replicate(self.get_random())
-            new_gc = GeneticCode(dnk=new_life)
+            new_gc = GeneticCode(dnk=new_life, goal=self.goal)
             self.pool.append(new_gc)
 
-    def evolution(self, turns=100):
+    def evolution(self, turns=1000):
         """Evalute pool"""
         iterations = 0
-        while (iterations < turns) and (self.pool[0].get() != GOAL):
+        while (iterations < turns) and (self.pool[0].get() != self.goal):
             for index, item in enumerate(self.pool):
                 self.pool[index].mutate()
             self.darvin()
-            print self.pool[0].get()
+            logger.info(self.pool[0].get())
             time.sleep(0.1)
             iterations += 1
         return iterations
 
-gp = GenePool()
-print gp.evolution()
-print "=========================="
-#gp._print()
+def main():
+    usage = '%s [options] [text]' % sys.argv[0]
+    parser = OptionParser(usage)
+    parser.add_option('-l', '--log', default='-',
+                      help='redirect logs to file')
+    opts, args = parser.parse_args()
+
+    if opts.log == '-':
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    else:
+        logging.basicConfig(filename="helloworld.log", level=logging.INFO)
+
+    if args:
+        text = args[0]
+    else:
+        text = GOAL
+
+    gp = GenePool(goal=text)
+    #gp._print()
+    steps = gp.evolution()
+    logger.info("Steps: %d" % steps)
+    
+
+start_time = time.time()
+main()
+print
+print "Estimatied time:\t%s" % (time.time() - start_time)
